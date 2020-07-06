@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/shirou/gopsutil/process"
 	"io"
+	"io/ioutil"
 	"os"
 	"regexp"
 	"strconv"
@@ -135,4 +136,29 @@ func GetProcessStatus(pid int32) (*ProcessStatus, error) {
 	processStatus.MaxOpenFiles = limit.SLimit
 
 	return processStatus, nil
+}
+
+// 获取所有的进程
+func GetAllProcess() ([]int32, error) {
+	var (
+		err      error
+		proc     = "/proc"
+		fileInfo []os.FileInfo
+		pattern  = regexp.MustCompile(`\d+`)
+		pids     []int32
+	)
+
+	if fileInfo, err = ioutil.ReadDir(proc); err != nil {
+		return nil, err
+	}
+
+	for _, f := range fileInfo {
+		name := f.Name()
+		if pattern.MatchString(name) {
+			pid, _ := strconv.Atoi(name)
+			pids = append(pids, int32(pid))
+		}
+	}
+
+	return pids, nil
 }

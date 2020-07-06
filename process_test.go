@@ -31,3 +31,12 @@ func TestGetSystemOpenFiles(t *testing.T) {
 	}
 	fmt.Println(f)
 }
+
+func TestGetAllProcess(t *testing.T) {
+	pids, err := GetAllProcess()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	fmt.Println(pids)
+}

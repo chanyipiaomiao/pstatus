@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/modood/table"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -14,7 +15,7 @@ func main() {
 		err            error
 		pid            *string
 		pids           []int32
-		processes      []*ProcessStatus
+		processes      Processes
 		systemOpenFile []*SystemOpenFiles
 	)
 
@@ -22,18 +23,21 @@ func main() {
 	flag.Parse()
 
 	if *pid == "" {
-		fmt.Println("need process pid, like: 1234 or 123,456")
-		return
+		pids, err = GetAllProcess()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	} else {
+		for _, p := range strings.Split(*pid, ",") {
+			pi, _ := strconv.Atoi(p)
+			pids = append(pids, int32(pi))
+		}
 	}
 
 	if systemOpenFile, err = GetSystemOpenFiles(); err != nil {
 		fmt.Println(err)
 		return
-	}
-
-	for _, p := range strings.Split(*pid, ",") {
-		pi, _ := strconv.Atoi(p)
-		pids = append(pids, int32(pi))
 	}
 
 	for _, p := range pids {
@@ -44,6 +48,8 @@ func main() {
 		}
 		processes = append(processes, status)
 	}
+
+	sort.Sort(processes)
 
 	table.Output(systemOpenFile)
 	table.Output(processes)
