@@ -10,10 +10,12 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type SystemInfo struct {
 	CPU                int     `table:"CPU"`
+	CPUPercent         string  `table:"CPU Used Percent"`
 	Memory             float64 `table:"Memory"`
 	MemoryUsedPercent  string  `table:"Memory Used Percent"`
 	ProcessCount       int     `table:"Process Number"`
@@ -37,6 +39,7 @@ func GetSystemInfo() ([]*SystemInfo, error) {
 		memTotal       float64
 		memUsedPercent string
 		processNum     []*process.Process
+		cpuUsedPercent []float64
 	)
 
 	if fileMax, err = ioutil.ReadFile(max); err != nil {
@@ -61,6 +64,11 @@ func GetSystemInfo() ([]*SystemInfo, error) {
 		return nil, err
 	}
 
+	// 获取CPU使用率
+	if cpuUsedPercent, err = cpu.Percent(1*time.Second, false); err != nil {
+		return nil, err
+	}
+
 	// 获取内存
 	if memInfo, err = mem.VirtualMemory(); err != nil {
 		return nil, err
@@ -77,6 +85,7 @@ func GetSystemInfo() ([]*SystemInfo, error) {
 	return []*SystemInfo{
 		{
 			CPU:                cpuCount,
+			CPUPercent:         fmt.Sprintf("%.2f%%", cpuUsedPercent[0]),
 			Memory:             memTotal,
 			MemoryUsedPercent:  memUsedPercent,
 			ProcessCount:       len(processNum),

@@ -2,10 +2,12 @@ package main
 
 import (
 	"fmt"
+	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/process"
 	"math"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestString(t *testing.T) {
@@ -59,4 +61,13 @@ func TestGetProcessNum(t *testing.T) {
 		return
 	}
 	fmt.Println(p)
+}
+
+func TestCPUPercent(t *testing.T) {
+	cpu1, err := cpu.Percent(1*time.Second, true)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	fmt.Println(cpu1)
 }
