@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"github.com/shirou/gopsutil/net"
 	"github.com/shirou/gopsutil/process"
 	"io"
 	"io/ioutil"
@@ -13,12 +14,27 @@ import (
 )
 
 type ProcessStatus struct {
+	PID          int32   `table:"PID"`
+	Name         string  `table:"Name"`
+	Username     string  `table:"Username"`
+	Exe          string  `table:"Exe"`
+	CPU          float64 `table:"CPU"`
+	Mem          float32 `table:"Mem"`
+	Connections  int     `table:"Connections"`
+	OpenFiles    int     `table:"Open Files"`
+	MaxOpenFiles int     `table:"Max Open Files"`
+}
+
+type ProcessesDisplay []*ProcessStatusDisplay
+
+type ProcessStatusDisplay struct {
 	PID          int32  `table:"PID"`
 	Name         string `table:"Name"`
 	Username     string `table:"Username"`
-	CMD          string `table:"CMD"`
+	Exe          string `table:"Exe"`
 	CPU          string `table:"CPU"`
 	Mem          string `table:"Mem"`
+	Connections  int    `table:"Connections"`
 	OpenFiles    int    `table:"Open Files"`
 	MaxOpenFiles int    `table:"Max Open Files"`
 }
@@ -77,11 +93,12 @@ func GetProcessStatus(pid int32) (*ProcessStatus, error) {
 		openFile      []process.OpenFilesStat
 		processStatus *ProcessStatus
 		limit         *Limit
+		connections   []net.ConnectionStat
 	)
 
 	p, err = process.NewProcess(pid)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("process does not exist, pid: %d", pid)
 	}
 
 	processStatus = &ProcessStatus{PID: pid}
@@ -101,39 +118,53 @@ func GetProcessStatus(pid int32) (*ProcessStatus, error) {
 	processStatus.Username = username
 
 	// 获取程序的路径
-	cmd, err = p.Cmdline()
+	cmd, err = p.Exe()
 	if err != nil {
-		return nil, fmt.Errorf("get process cmdline error: %s", err)
+		if cmd, err = p.Cmdline(); err != nil {
+			return nil, fmt.Errorf("get process cmdline error: %s", err)
+		}
+		processStatus.Exe = strings.Split(cmd, " ")[0]
+	} else {
+		if len(cmd) > 20 {
+			processStatus.Exe = cmd[0:20] + "..."
+		} else {
+			processStatus.Exe = cmd
+		}
 	}
-	processStatus.CMD = strings.Split(cmd, " ")[0]
 
 	// 获取进程的CPU使用率
 	cpu, err = p.CPUPercent()
 	if err != nil {
 		return nil, fmt.Errorf("get process cpu percent error: %s", err)
 	}
-	processStatus.CPU = fmt.Sprintf("%.2f%%", cpu)
+	processStatus.CPU = cpu
 
 	// 获取内存使用率
 	mem, err = p.MemoryPercent()
 	if err != nil {
 		return nil, fmt.Errorf("get process mem percent error: %s", err)
 	}
-	processStatus.Mem = fmt.Sprintf("%.2f%%", mem)
+	processStatus.Mem = mem
 
-	// 获取打开文件数
+	// 获取进程打开文件数
 	openFile, err = p.OpenFiles()
 	if err != nil {
 		return nil, fmt.Errorf("get process openfiles error: %s", err)
 	}
 	processStatus.OpenFiles = len(openFile)
 
+	// 获取系统打开文件总数
 	limit, err = GetProcessMaxOpenFiles(pid)
 	if err != nil {
 		return nil, fmt.Errorf("get process MaxOpenFiles error: %s", err)
 	}
-
 	processStatus.MaxOpenFiles = limit.SLimit
+
+	// 获取连接数
+	if connections, err = p.Connections(); err != nil {
+		return nil, fmt.Errorf("get process connections error: %s", err)
+	}
+	processStatus.Connections = len(connections)
 
 	return processStatus, nil
 }

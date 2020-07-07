@@ -1,5 +1,5 @@
 
-app_name = process-status
+app_name = pstatus
 
 define build-linux
 	@rm -f $(app_name)*
