@@ -65,7 +65,7 @@ func GetSystemInfo() ([]*SystemInfo, error) {
 	}
 
 	// 获取CPU使用率
-	if cpuUsedPercent, err = cpu.Percent(1*time.Second, false); err != nil {
+	if cpuUsedPercent, err = cpu.Percent(time.Second, false); err != nil {
 		return nil, err
 	}
 

@@ -7,7 +7,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 )
 
 func main() {
@@ -41,64 +40,57 @@ func main() {
 		}
 	}
 
-	ticker := time.NewTicker(1 * time.Second)
-	for {
-		<-ticker.C
-		fmt.Printf("\r")
-		if systemInfo, err = GetSystemInfo(); err != nil {
-			fmt.Println(err)
-			return
-		}
-
-		for _, p := range pids {
-			status, err := GetProcessStatus(p)
-			if err != nil {
-				continue
-			}
-			if status.OpenFiles > 1 {
-				processes = append(processes, status)
-			}
-		}
-
-		switch *sorted {
-		case "openfile":
-			sort.Sort(processes)
-		case "cpu":
-			sort.Sort(ProcessSortByCPU{processes})
-		case "mem":
-			sort.Sort(ProcessSortByMem{processes})
-		case "conn":
-			sort.Sort(ProcessSortByConnections{processes})
-		}
-
-		for _, p := range processes {
-			processDisplay = append(processDisplay, &ProcessStatusDisplay{
-				PID:          p.PID,
-				Name:         p.Name,
-				Username:     p.Username,
-				Exe:          p.Exe,
-				CPU:          fmt.Sprintf("%.2f%%", p.CPU),
-				Mem:          fmt.Sprintf("%.2f%%", p.Mem),
-				Connections:  p.Connections,
-				OpenFiles:    p.OpenFiles,
-				MaxOpenFiles: p.MaxOpenFiles,
-			})
-		}
-
-		var info = table.Table(systemInfo)
-		var display string
-
-		if *top == 0 {
-			display = table.Table(processDisplay)
-		} else {
-			length := len(processDisplay)
-			if length > *top {
-				display = table.Table(processDisplay[0:*top])
-			} else {
-				display = table.Table(processDisplay)
-			}
-		}
-
-		fmt.Printf("%s\n%s\n", info, display)
+	if systemInfo, err = GetSystemInfo(); err != nil {
+		fmt.Println(err)
+		return
 	}
+
+	for _, p := range pids {
+		status, err := GetProcessStatus(p)
+		if err != nil {
+			continue
+		}
+		if status.OpenFiles > 1 {
+			processes = append(processes, status)
+		}
+	}
+
+	switch *sorted {
+	case "openfile":
+		sort.Sort(processes)
+	case "cpu":
+		sort.Sort(ProcessSortByCPU{processes})
+	case "mem":
+		sort.Sort(ProcessSortByMem{processes})
+	case "conn":
+		sort.Sort(ProcessSortByConnections{processes})
+	}
+
+	for _, p := range processes {
+		processDisplay = append(processDisplay, &ProcessStatusDisplay{
+			PID:          p.PID,
+			Name:         p.Name,
+			Username:     p.Username,
+			Exe:          p.Exe,
+			CPU:          fmt.Sprintf("%.2f%%", p.CPU),
+			Mem:          fmt.Sprintf("%.2f%%", p.Mem),
+			Connections:  p.Connections,
+			OpenFiles:    p.OpenFiles,
+			MaxOpenFiles: p.MaxOpenFiles,
+		})
+	}
+
+	table.Output(systemInfo)
+
+	if *top == 0 {
+		table.Output(processDisplay)
+	} else {
+		length := len(processDisplay)
+		if length > *top {
+			table.Output(processDisplay[0:*top])
+		} else {
+			table.Output(processDisplay)
+		}
+	}
+
 }
